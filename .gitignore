@@ -14,3 +14,8 @@ check/
 settings.json
 errors.log
 api.json
+
+# 各人 Agent 在这个文件夹里的配置（里面有本机路径）
+.codex/
+.cursor/
+.claude/

@@ -10,7 +10,8 @@ namespace FishPet;
 internal static class Tools
 {
     internal static string PipeName => "FishPet." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)))).Substring(0, 20);
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "|" +
+        System.IO.Path.GetFullPath(AppContext.BaseDirectory).TrimEnd('\\', '/').ToUpperInvariant()))).Substring(0, 20);
     internal static object Text(object value) => new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(value) } } };
     internal static object Error(string message) => new { isError = true, content = new[] { new { type = "text", text = message } } };
     internal static object Image(string dataUrl, object metadata) => new { content = new object[] {

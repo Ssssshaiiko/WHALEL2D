@@ -14,7 +14,8 @@ try
 {
     int at = Array.IndexOf(args, "--pipe");
     var pipeName = at >= 0 && at + 1 < args.Length ? args[at + 1] : "FishPet." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)))).Substring(0, 20);
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "|" +
+        Path.GetFullPath(AppContext.BaseDirectory).TrimEnd('\\', '/').ToUpperInvariant()))).Substring(0, 20);
     using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
     try { await pipe.ConnectAsync(1500); }
     catch (TimeoutException) when (at < 0)
