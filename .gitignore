@@ -1,0 +1,16 @@
+# 各人自己下载的东西，不随插件分享
+sdk/*
+!sdk/下载SDK.md
+model/*
+!model/获取模型.md
+
+# 本机编译和运行出来的东西
+renderer/build/
+bin/
+src/**/bin/
+src/**/obj/
+cache/
+check/
+settings.json
+errors.log
+api.json

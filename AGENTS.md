@@ -1,0 +1,138 @@
+# 给 Agent：带用户装好大肥鱼桌宠，再接到你自己身上
+
+用户把这个文件夹交给你，就是想让桌面上出现“大肥鱼” Live2D 桌宠，并且由你来控制她说话、做表情和动作。**不用等他再吩咐，现在就开始带他装。**
+
+插件文件夹就是这份文件所在的文件夹，下面写作 `插件\`。
+
+## 怎么带
+
+- **先看装到哪了。** 你能看到 say、look_in_mirror 这些工具（或者用户的程序已经在往 api.json 里的地址发请求），说明已经装好接上了，直接看最后的“平时怎么用”；`插件\bin\FishPet.Mcp.exe` 已经有了但你还看不到这些工具，就从第 5 步接着做；都没有就从第 1 步开始。
+- **先说清楚要做什么。** 开始前用两三句话告诉用户：一共六步，大概要多久（顺利的话二三十分钟，主要花在下载和第一次编译上），其中有两件事得他自己来：从 Live2D 官网下载 SDK、从 UP 主那里拿模型。
+- **能自己做的自己做。** 检查环境、运行命令、看输出、改配置文件，都由你来，不要让用户去开 PowerShell。只有你没法执行命令时，才把命令原样给他，让他复制粘贴运行，再把结果发给你。
+- **要用户动手的，一次只交代一件。** 给链接，说清楚点哪里、下哪个、放到哪个文件夹，然后等他说“好了”，你再去检查；检查不过就告诉他差在哪、怎么改。
+- **许可要他自己同意。** SDK 的许可、模型作者的规则，都由用户本人看过、同意，你不要替他点“同意”。
+- **每做完一步报个进度**（比如“第 3 步完成，还剩 3 步”）。用户多半不懂编程，少用术语，出错时先安抚再给办法。
+
+## 第 1 步：看看电脑能不能装
+
+你自己检查，不用问用户：
+
+- 是不是 64 位 Windows 10/11。不是的话告诉用户这个插件装不了。
+- 有没有 Visual Studio 生成工具的 C++ 部分：`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath` 有输出就是有。
+- 有没有 .NET 10 SDK：`dotnet --list-sdks` 里有 10 开头的就是有。
+
+缺的就装。先告诉用户“接下来要装编译用的工具，会弹出管理员确认，请点‘是’，下载要几分钟”，再运行：
+
+- C++ 生成工具：`winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`
+- .NET 10 SDK：`winget install Microsoft.DotNet.SDK.10`
+
+没有 winget 的话，把官网下载页给用户（https://visualstudio.microsoft.com/visual-cpp-build-tools/ 安装时勾“使用 C++ 的桌面开发”；https://dotnet.microsoft.com/download/dotnet/10.0 下载 SDK），陪他装完。
+
+## 第 2 步：请用户下载 Cubism SDK
+
+告诉用户：渲染要用 Live2D 官方的工具包，插件里不能带，需要他自己下载，下载时要同意 Live2D 的许可。
+
+1. 请他打开 https://www.live2d.com/sdk/download/native/ ，看过许可后同意，下载 Windows 版（Cubism SDK for Native）压缩包。
+2. 请他把压缩包解压到 `插件\sdk\` 里（层级不限）。
+3. 他说好了，你检查：`插件\sdk\` 下面能找到 `Core\include\Live2DCubismCore.h`。找不到就看看他解压到哪了，帮他挪对。
+
+## 第 3 步：请用户获取模型
+
+告诉用户：模型是 B 站 UP 主分享的，插件里不能带，需要他按 UP 主的说明自己获取。
+
+1. 请他打开 https://www.bilibili.com/video/BV1KmxY66EZ3/ ，按视频简介里 UP 主说的方式拿到模型。
+2. 请他把模型解压到 `插件\model\` 里（层级不限）。
+3. 他说好了，你检查：`插件\model\` 下面能找到 `大肥鱼.model3.json`。
+4. 提醒他：模型的使用规则以 UP 主的说明为准，别把模型再分享出去。
+
+## 第 4 步：编译，再试一遍
+
+告诉用户“接下来我来编译，第一次要几分钟，期间不用他做什么”，然后在 `插件\` 里运行：
+
+```
+powershell -ExecutionPolicy Bypass -File setup.ps1 -Check
+```
+
+它会检查 SDK、模型和编译工具，编译渲染器、桌宠程序和 MCP 接口，跑动作逻辑测试，最后在屏幕外开一个看不见的桌宠试一遍：让她说一句话、照一次镜子，把两张图存进 `插件\check\`。
+
+- 全是 ✓、最后打印出 MCP 的路径，就成功了。把 `check\` 里的两张图给用户看，告诉他“她已经能动了，就差接到我身上”。
+- 出现 ✗ 就照它说的补上，再运行一次。还有问题看 `插件\errors.log`。
+
+## 第 5 步：把桌宠接到你自己身上
+
+有两种接法，看你自己是什么：
+
+- **你支持 MCP**（Claude Code、Claude 桌面版、Cursor 这类）：照下面的“用 MCP 接”。
+- **你是用模型 API 搭起来的**（用户自己写的聊天程序、SillyTavern、AstrBot 这类，自己没有 MCP）：跳到后面的“用 API 接”。
+
+### 用 MCP 接
+
+MCP 服务是 `插件\bin\FishPet.Mcp.exe`（stdio，没有参数）。它连上时如果桌宠还没开，会自动把桌宠开起来。
+
+按你自己是什么 Agent，把它加进你的 MCP 配置（用完整路径）：
+
+- Claude Code：`claude mcp add dafeiyu -- "完整路径\bin\FishPet.Mcp.exe"`
+- Claude 桌面版：在 `%APPDATA%\Claude\claude_desktop_config.json` 的 `mcpServers` 里加 `"dafeiyu": { "command": "完整路径\\bin\\FishPet.Mcp.exe" }`
+- Cursor 等其他支持 MCP 的 Agent：在它的 MCP 配置里加同样的一条。
+
+能自己改配置就自己改，改不了就把要加的内容和文件位置告诉用户。多半要重启你自己才会生效：告诉用户怎么重启，并说清楚重启后对你说一句“继续装大肥鱼”，你会接着做第 6 步。重启回来后，确认你能看到 say、look_in_mirror 这些工具。
+
+### 用 API 接
+
+桌宠在本机开了一个网页接口，只有这台电脑能连，要带口令。任何程序发个 HTTP 请求就能控制她。
+
+1. **先让桌宠开着。** 这种接法没有 MCP 帮着开，运行 `插件\bin\FishPet.exe` 就行（再开一次不会开出两个）。想开机自动出来，就在用户的“启动”文件夹（`shell:startup`）里放一个它的快捷方式，能做就你来做。
+2. **地址和口令**在 `插件\api.json` 里（桌宠第一次开起来后生成），每个请求都要带 `Authorization: Bearer <token>`。这个文件别给别人。
+3. **最简单的接法（不用函数调用）**：模型回复的每一行原样发给 `POST /say`，正文就是这行话（〔〕照样写在里面）；字会出现在气泡里，〔〕变成动作，它会等上一句演完才说下一句。几乎任何聊天程序加一行“回复时顺便发个请求”就能接上。缺点是照镜子、回头看、换装这些用不了。
+4. **完整接法（用函数调用）**：`GET /tools?format=openai`（或 `format=anthropic`）拿到现成的工具定义，交给模型；模型要用哪个工具，就把参数 JSON 发给 `POST /call/<工具名>`，把返回的 `content`（文字和图片）按你用的 API 的格式回给模型。这样和 MCP 一模一样。
+5. 改好用户的程序（或告诉他改哪里），发一句试试。
+
+Python 的例子（用 requests）：
+
+```python
+import json, pathlib, requests
+
+api = json.loads(pathlib.Path(r"插件完整路径\api.json").read_text(encoding="utf-8"))
+head = {"Authorization": "Bearer " + api["token"]}
+
+# 最简单：把模型的回复发到桌面上，一行一个气泡
+def to_desktop(reply: str):
+    for line in reply.splitlines():
+        if line.strip():
+            requests.post(api["url"] + "/say", data=line.encode("utf-8"), headers=head, timeout=60)
+
+# 完整：工具交给模型；模型要用工具时转给桌宠，结果再回给模型
+tools = requests.get(api["url"] + "/tools?format=openai", headers=head).json()
+def run_tool(name: str, arguments: dict) -> dict:
+    return requests.post(f'{api["url"]}/call/{name}', json=arguments, headers=head, timeout=120).json()
+```
+
+用最简单的接法时，第 6 步的身体说明要改两处：把第一段里“就用 say 工具，一句一个气泡”换成“你回复里的每一行都会出现在桌面上的气泡里，一行一个气泡”；删掉讲 recent_events、set_activity、照镜子和 look_back、dress 的那几条（这些工具你用不了）。
+
+## 第 6 步：给角色装上身体
+
+`插件\prompt\身体说明.md` 是给角色看的身体说明：有哪些动作、怎么写、微表情怎么挑、例子。
+
+1. 问用户：角色怎么称呼他？角色叫什么名字？（他要是已经给你设定过角色，就用设定里的。）
+2. 把文件里所有 `{称呼}` 和 `{名字}` 换掉。
+3. 把从【你的身体】开始的整段放进你自己的角色设定里：Claude Code 放进 CLAUDE.md，Claude 桌面版放进项目说明或个性化设置，其他 Agent 放进系统提示词或角色卡。能自己放就自己放，放不了就把整段给用户，告诉他贴到哪。
+4. 词、规矩和例子不要改，它们是对着这个模型一点点调出来的。
+
+装好以后，用 `say`（API 简单接法就是直接回一句）跟用户打个招呼，比如 `〔看过来 点头×2〕装好啦〔眯眼笑 脸红〕以后请多关照！`，再告诉用户：可以用鼠标拖她、点她，她会有反应；想关掉就跟你说。
+
+## 平时怎么用
+
+- 在桌面上说话一律用 `say`，一句一个气泡，几句话就调几次；它会等上一句演完才开始。你在聊天窗口里回的字不会自己跑到桌面上。
+- 话里用〔〕写神情和动作，规矩照身体说明来。有自己的语音（wav）就放进 `say` 的 `audio`，嘴会跟着声音动。
+- 看视频、读文章、写东西的时候，用 `set_activity` 开始和结束，她会戴上、摘下眼镜。
+- 想看自己现在什么样、某个表情好不好看：`look_in_mirror`（可以先 try）。说话时的样子会自动拍下来：`look_back`。
+- 用户点她、拖她，她自己会反应；想接一句话，就用 `recent_events` 看刚才发生了什么。
+- 换衣服配饰用 `dress`；体型、帧率、大小、视线跟不跟鼠标、空闲小动作的间隔用 `update_settings`；现状用 `get_state`。
+- 要关掉她用 `quit`，她会鞠躬告别再关。下次用任何工具会自动再开。
+
+## 常见问题
+
+- **没出现**：看 `get_state` 里的 `trouble`，或 `插件\errors.log`。多半是 SDK 或模型没放对，或者还没跑过 setup.ps1。
+- **想换位置**：让用户直接用鼠标拖她，位置会记住。她可以一半沉到任务栏后面，脸会留在外面。
+- **想卸载**：先 `quit`，从你的 MCP 配置里删掉 dafeiyu，再删掉整个插件文件夹。
+- **用户想把插件分享给别人**：只分享插件本身，`sdk\`、`model\`、`renderer\build\`、`bin\` 都不要带上（`.gitignore` 已经排除了它们）。
