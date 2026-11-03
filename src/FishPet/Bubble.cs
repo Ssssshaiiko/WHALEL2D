@@ -78,6 +78,12 @@ internal sealed class BubbleWindow : Window
     // In a test the bubble only keeps its words, out of the user's sight.
     internal bool Quiet { get; set; }
 
+    // How big the bubble is (settings: bubble_scale): the words, the outline and how wide it may grow, together.
+    internal double Scale
+    {
+        set { ((FrameworkElement)Content).LayoutTransform = new ScaleTransform(value, value); Place(); }
+    }
+
     internal void Say(string text)
     {
         Text.Text = text;

@@ -91,6 +91,7 @@ internal sealed class PetWindow : Window
         Content = new Grid { Children = { image } };
         bubble = new BubbleWindow(this, () => Height * Shape.HeadTop);
         bubble.Quiet = test;
+        bubble.Scale = settings.BubbleScale;
         speech = new Speech(bubble);
         body = new Body(Send);
         behavior = new Behavior(Send, () => [.. settings.Outfit, .. body.Overlays], new Random()) { HandBusy = () => body.HandUp, Ended = body.Restore };
@@ -590,6 +591,10 @@ internal sealed class PetWindow : Window
                 {
                     settings.Scale = Math.Clamp(size, .5, 2); ApplySize(); Clamp();
                 }
+                if (args.TryGetProperty("bubble_scale", out var bubbleScale) && bubbleScale.TryGetDouble(out var bubbleSize))
+                {
+                    settings.BubbleScale = Math.Clamp(bubbleSize, .5, 2); bubble.Scale = settings.BubbleScale;
+                }
                 if (args.TryGetProperty("follow_mouse", out var follow) && follow.ValueKind is JsonValueKind.True or JsonValueKind.False) settings.FollowMouse = follow.GetBoolean();
                 if (args.TryGetProperty("idle_seconds", out var idle) && idle.TryGetInt32(out var seconds)) settings.IdleSeconds = Math.Clamp(seconds, 15, 600);
                 settings.Save();
@@ -619,7 +624,7 @@ internal sealed class PetWindow : Window
 
     private object State() => new
     {
-        shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, follow_mouse = settings.FollowMouse,
+        shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, bubble_scale = settings.BubbleScale, follow_mouse = settings.FollowMouse,
         idle_seconds = settings.IdleSeconds, position = new { Left, Top }, saying = speech.IsSaying, reaction = behavior.Showing, trouble,
         clothes = Outfit.Clothes.Select(item => item.Label).ToArray(), accessories = Outfit.Accessories.Select(item => item.Label).ToArray(),
     };

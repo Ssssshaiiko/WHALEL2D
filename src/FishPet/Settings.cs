@@ -13,6 +13,8 @@ internal sealed class Settings
     public string[] Outfit { get; set; } = [];
     public int Fps { get; set; } = 60;
     public double Scale { get; set; } = 1;
+    // Her speech bubble, words and all, apart from her own size.
+    public double BubbleScale { get; set; } = 1;
     public bool FollowMouse { get; set; } = true;
     // Seconds between the small things she does by herself when nobody talks to her.
     public int IdleSeconds { get; set; } = 40;
@@ -39,6 +41,7 @@ internal sealed class Settings
         Outfit = (Outfit ?? []).Where(item => FishPet.Outfit.Expression(item) != null).Select(item => FishPet.Outfit.Expression(item)!).Distinct().ToArray();
         if (!FpsChoices.Contains(Fps)) Fps = 60;
         Scale = Math.Clamp(double.IsFinite(Scale) ? Scale : 1, .5, 2);
+        BubbleScale = Math.Clamp(double.IsFinite(BubbleScale) && BubbleScale > 0 ? BubbleScale : 1, .5, 2);
         IdleSeconds = Math.Clamp(IdleSeconds, 15, 600);
         return this;
     }
