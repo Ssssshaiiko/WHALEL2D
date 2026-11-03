@@ -94,7 +94,7 @@ internal sealed class HttpApi : IDisposable
             if (method == "POST" && path == "/say")
             {
                 var text = Encoding.UTF8.GetString(body);
-                var arguments = text.TrimStart().StartsWith('{') ? JsonDocument.Parse(text).RootElement.Clone() : JsonSerializer.SerializeToElement(new { text });
+                var arguments = SayArguments(text) ?? JsonSerializer.SerializeToElement(new { text });
                 await Write(stream, 200, await execute("say", arguments, timeout.Token));
                 return;
             }
@@ -115,6 +115,19 @@ internal sealed class HttpApi : IDisposable
     }
 
     private static JsonElement Empty() => JsonSerializer.SerializeToElement(new { });
+
+    // POST /say takes {"text": ...} or the words as they are: only an object with "text" in it is the first, so a
+    // reply that happens to begin with "{" is still said.
+    private static JsonElement? SayArguments(string body)
+    {
+        if (!body.TrimStart().StartsWith('{')) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("text", out _) ? document.RootElement.Clone() : null;
+        }
+        catch (JsonException) { return null; }
+    }
     private static string[] ToolNames() => Tools.Definitions.Select(tool => JsonSerializer.SerializeToElement(tool).GetProperty("name").GetString()!).ToArray();
 
     private static object ToolsAs(string format) => format switch

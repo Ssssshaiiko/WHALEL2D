@@ -26,12 +26,14 @@ Ok ('模型：' + (Split-Path $model -Parent))
 
 # Visual Studio 生成工具（C++）里的编译器和 CMake
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-$studio = if (Test-Path -LiteralPath $vswhere) { & $vswhere -products * -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath }
+# 生成器的版本也按装了 C++ 的这一套来：另外装着没勾 C++ 的新版时，按最新版选会配置失败
+$cpp = '-products', '*', '-latest', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+$studio = if (Test-Path -LiteralPath $vswhere) { & $vswhere @cpp -property installationPath }
 if (!$studio) { Missing '没装 Visual Studio 生成工具的 C++ 部分。可以运行：winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"' }
 $cmake = Join-Path $studio 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
 if (!(Test-Path -LiteralPath $cmake)) { $cmake = (Get-Command cmake -ErrorAction SilentlyContinue).Source }
 if (!$cmake) { Missing '没找到 CMake。在 Visual Studio Installer 里给生成工具勾上“用于 Windows 的 C++ CMake 工具”，或者 winget install Kitware.CMake。' }
-$line = & $vswhere -products * -latest -property catalog_productLineVersion
+$line = & $vswhere @cpp -property catalog_productLineVersion
 $generator = switch ($line) { '2026' { 'Visual Studio 18 2026' } '2019' { 'Visual Studio 16 2019' } default { 'Visual Studio 17 2022' } }
 Ok ('编译工具：' + $generator)
 

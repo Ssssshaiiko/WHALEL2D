@@ -236,6 +236,19 @@ void VerifyLive2DBehavior()
     Check(spoken.Shown == 2 && !spoken.Done, "with her voice the words spread over the recording and nothing waits");
     spoken.Advance(2.1);
     Check(spoken.Done, "and end with it");
+    Check(Math.Abs(said.Spoken - (3 / 9.0 + .5)) < 1e-9 && spoken.Spoken == 2, "how long the words take: the recording when there is one");
+    var ending = new Line("好呀〔点头×2〕", (_, _, _) => 1.5);
+    ending.Advance(.3);
+    Check(ending.Shown == 2 && !ending.Done, "a move at the end has begun once the words are out");
+    ending.Advance(1.6);
+    Check(!ending.Done, "and the line is not over while it plays, so the next one waits");
+    ending.Advance(2);
+    Check(ending.Done, "then it is");
+    var alone = new Line("〔点头〕", (_, _, _) => 1.5);
+    alone.Advance(0);
+    Check(!alone.Done, "a move without words takes its time too");
+    alone.Advance(1.6);
+    Check(alone.Done, "and ends with it");
     // What she says at once is a bubble a line, cues alone on a line going with the words after them.
     Check(Line.Split("〔看过来〕\n好呀〔点头〕\r\n\n  明天见  \n〔眯眼笑〕").SequenceEqual(["〔看过来〕好呀〔点头〕", "明天见〔眯眼笑〕"]), "several lines are several bubbles");
     Check(Line.Split("好呀").SequenceEqual(["好呀"]) && Line.Split("〔点头〕").SequenceEqual(["〔点头〕"]), "one line, or cues alone, is one");

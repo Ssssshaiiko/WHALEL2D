@@ -265,7 +265,11 @@ internal sealed class PetWindow : Window
         if (swayX != 0 || swayY != 0) current.Send(FormattableString.Invariant($"sway {swayX:0} {swayY:0}"));
         UpdateCut();
         UpdateMouth(current);
-        if ((server?.Connections ?? 0) == 0) behavior.ClearActivities();   // Nobody is left to say the work ended.
+        // When the last agent goes, nobody is left to say its work ended. A program on the HTTP interface has no
+        // connection to lose: what it starts stays until it says it is done.
+        int agents = server?.Connections ?? 0;
+        if (agents == 0 && agentsBefore > 0) behavior.ClearActivities();
+        agentsBefore = agents;
         UpdateBody();
         UpdateFilm();
         speech.Tick();
@@ -292,6 +296,7 @@ internal sealed class PetWindow : Window
     // servers. A program on the HTTP interface keeps her while it uses her; started by hand with no agent, she stays.
     private static readonly TimeSpan AloneFor = TimeSpan.FromSeconds(15), HttpUse = TimeSpan.FromMinutes(10);
     private bool hadAgent;
+    private int agentsBefore;
     private DateTime? aloneSince;
     private DateTime lastHttp = DateTime.MinValue;
 
@@ -382,11 +387,12 @@ internal sealed class PetWindow : Window
 
     // ---- What she says ----
 
-    // A new line waits for the one before to be played out, or her body would be cut off mid-move.
+    // A new line waits for the one before to be played out, or her body would be cut off mid-move. At most as long as
+    // its words take and 20 s more, so a long line or recording plays out but nothing stuck holds her up for good.
     private async Task WaitForLine(CancellationToken token)
     {
         var waited = Stopwatch.StartNew();
-        while ((silent != null || speech.IsSaying) && waited.Elapsed.TotalSeconds < 20) await Task.Delay(50, token);
+        while ((silent != null || speech.IsSaying) && waited.Elapsed.TotalSeconds < 20 + speech.Spoken) await Task.Delay(50, token);
     }
 
     // In the order they came, each once the one before has been acted out.

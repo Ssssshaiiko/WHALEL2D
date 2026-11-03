@@ -365,7 +365,10 @@ public:
         if (!_model) Fail("moc3 加载失败");
 
         buffer = LoadFile(Utf8(directory + Wide(setting->GetPhysicsFileName())), &size);
-        if (buffer) { LoadPhysics(buffer, size); ReleaseBytes(buffer); }
+        if (!buffer) Fail("读不到物理文件（physics3.json）");
+        LoadPhysics(buffer, size);
+        ReleaseBytes(buffer);
+        if (!_physics) Fail("物理文件加载失败");
         _updateScheduler.AddUpdatableList(CSM_NEW CubismPhysicsUpdater(*_physics));
 
         _eyeBlink = CubismEyeBlink::Create(setting);
@@ -768,7 +771,8 @@ struct Stage
             DXGI_ADAPTER_DESC1 desc;
             candidate->GetDesc1(&desc);
             if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) continue;
-            if (desc.DedicatedVideoMemory > bestMemory) { bestMemory = desc.DedicatedVideoMemory; best = candidate; adapterName = desc.Description; }
+            // Integrated graphics that report no memory of their own count too; of several, the one with the most.
+            if (!best || desc.DedicatedVideoMemory > bestMemory) { bestMemory = desc.DedicatedVideoMemory; best = candidate; adapterName = desc.Description; }
         }
         if (!best) Fail("没有可用显卡");
         best.As(&adapter);

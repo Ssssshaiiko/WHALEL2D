@@ -136,6 +136,7 @@ internal sealed class Speech
     internal bool IsSaying => timer.IsEnabled;
     internal bool IsTalking => timer.IsEnabled && line?.Talking == true;
     internal string Words => line?.Plain ?? "";
+    internal double Spoken => line?.Spoken ?? 0;
 
     internal void Say(Line said)
     {

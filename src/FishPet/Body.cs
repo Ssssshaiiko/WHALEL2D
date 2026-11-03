@@ -262,7 +262,7 @@ internal sealed class Line
     private readonly Func<string, double, char, double> act;
     private readonly bool recorded;
     private int index;
-    private double at;
+    private double at, clock;
 
     // What she says in one go, a bubble for each line, said one after the other: she thinks the whole of it through and
     // says it at once, not a line, a pause to think, then the next (the owner, 2026-11-03). A line of nothing but 〔〕
@@ -304,6 +304,7 @@ internal sealed class Line
         double total = steps.Sum(step => step.Seconds);
         if (recorded && total > 0)
             for (int i = 0; i < steps.Count; i++) steps[i] = steps[i] with { Seconds = steps[i].Seconds * voiceSeconds!.Value / total };
+        Spoken = recorded ? voiceSeconds!.Value : total;
     }
 
     // The words between a cue and the next: how long they take to say, and whether they are said with a "！" or trail off.
@@ -321,13 +322,17 @@ internal sealed class Line
     // How much of Plain is out, in UTF-16 units.
     internal int Shown { get; private set; }
     internal bool Talking { get; private set; }
-    internal bool Done => index >= steps.Count;
+    // Once a move at the end has played too, not as it begins: the next line waits for it.
+    internal bool Done => index >= steps.Count && clock >= at;
     // When all of it, the last wait included, will have played (seconds since the line began).
     internal double Until => at;
+    // How long its words take to say (with a recording, the recording), without the waits for her body.
+    internal double Spoken { get; }
 
     // seconds: since the line began.
     internal void Advance(double seconds)
     {
+        clock = seconds;
         Talking = false;
         while (index < steps.Count && at <= seconds)
         {
