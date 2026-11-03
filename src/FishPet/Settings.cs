@@ -15,6 +15,10 @@ internal sealed class Settings
     public double Scale { get; set; } = 1;
     // Her speech bubble, words and all, apart from her own size.
     public double BubbleScale { get; set; } = 1;
+    // How long the bubble stays after her last word: 0 by how much she said (5 to 20 s), -1 until her next line or a click.
+    public int BubbleSeconds { get; set; }
+    // Out of the way while something else fills the screen, drawing nothing meanwhile (as the BigBlueFish pet does).
+    public bool HideOnFullscreen { get; set; } = true;
     public bool FollowMouse { get; set; } = true;
     // Seconds between the small things she does by herself when nobody talks to her.
     public int IdleSeconds { get; set; } = 40;
@@ -42,9 +46,12 @@ internal sealed class Settings
         if (!FpsChoices.Contains(Fps)) Fps = 60;
         Scale = Math.Clamp(double.IsFinite(Scale) ? Scale : 1, .5, 2);
         BubbleScale = Math.Clamp(double.IsFinite(BubbleScale) && BubbleScale > 0 ? BubbleScale : 1, .5, 2);
+        BubbleSeconds = StayFor(BubbleSeconds);
         IdleSeconds = Math.Clamp(IdleSeconds, 15, 600);
         return this;
     }
+
+    internal static int StayFor(int seconds) => seconds is -1 or 0 ? seconds : Math.Clamp(seconds, 5, 180);
 
     internal void Save()
     {

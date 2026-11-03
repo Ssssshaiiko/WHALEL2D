@@ -33,6 +33,9 @@ internal sealed class PetWindow : Window
     private readonly Behavior behavior;
     private readonly Body body;
     private readonly DispatcherTimer timer;
+    // Out of the way while another program fills the screen (settings: hide_on_fullscreen), looked at twice a second.
+    private bool hiddenForFullscreen;
+    private DateTime nextFullscreenLook;
     private Player? player;
     private ControlServer? server;
     private HttpApi? api;
@@ -92,7 +95,7 @@ internal sealed class PetWindow : Window
         bubble = new BubbleWindow(this, () => Height * Shape.HeadTop);
         bubble.Quiet = test;
         bubble.Scale = settings.BubbleScale;
-        speech = new Speech(bubble);
+        speech = new Speech(bubble) { Seconds = settings.BubbleSeconds };
         body = new Body(Send);
         behavior = new Behavior(Send, () => [.. settings.Outfit, .. body.Overlays], new Random()) { HandBusy = () => body.HandUp, Ended = body.Restore };
         ApplySize();
@@ -238,6 +241,12 @@ internal sealed class PetWindow : Window
     private void Tick()
     {
         if (player is not { } current) return;
+        if (DateTime.UtcNow >= nextFullscreenLook)
+        {
+            nextFullscreenLook = DateTime.UtcNow.AddMilliseconds(500);
+            UpdateFullscreen(current);
+        }
+        if (hiddenForFullscreen) return;
         // Moving the window pushes her body; physics carries that into her hair, skirt and tail.
         double swayX = (Left - lastLeft) * 30, swayY = (Top - lastTop) * 30;
         lastLeft = Left; lastTop = Top;
@@ -264,6 +273,20 @@ internal sealed class PetWindow : Window
         if (Math.Abs(x - lookX) + Math.Abs(y - lookY) < .01) return;
         lookX = x; lookY = y;
         current.Send(FormattableString.Invariant($"look {x:0.00} {y:0.00}"));
+    }
+
+    // While another program fills the screen she is hidden and her renderer draws nothing; her words still play on,
+    // unseen, and she is back on top once it is gone. Not in a test, which is out of sight anyway.
+    private void UpdateFullscreen(Player current)
+    {
+        bool covered = settings.HideOnFullscreen && !test && Fullscreen.InFront();
+        if (covered == hiddenForFullscreen) return;
+        hiddenForFullscreen = covered;
+        current.Send($"pause {(covered ? 1 : 0)}");
+        bubble.Quiet = covered || test;
+        if (covered) { bubble.Hide(); Hide(); return; }
+        Show();
+        Topmost = false; Topmost = true;
     }
 
     // ---- The user's hands on her ----
@@ -595,6 +618,15 @@ internal sealed class PetWindow : Window
                 {
                     settings.BubbleScale = Math.Clamp(bubbleSize, .5, 2); bubble.Scale = settings.BubbleScale;
                 }
+                if (args.TryGetProperty("bubble_seconds", out var stay) && stay.TryGetInt32(out var stays))
+                {
+                    settings.BubbleSeconds = Settings.StayFor(stays); speech.Seconds = settings.BubbleSeconds;
+                }
+                // Taken up at once: hidden behind a fullscreen program she comes back if it is turned off.
+                if (args.TryGetProperty("hide_on_fullscreen", out var hide) && hide.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    settings.HideOnFullscreen = hide.GetBoolean(); nextFullscreenLook = default;
+                }
                 if (args.TryGetProperty("follow_mouse", out var follow) && follow.ValueKind is JsonValueKind.True or JsonValueKind.False) settings.FollowMouse = follow.GetBoolean();
                 if (args.TryGetProperty("idle_seconds", out var idle) && idle.TryGetInt32(out var seconds)) settings.IdleSeconds = Math.Clamp(seconds, 15, 600);
                 settings.Save();
@@ -624,7 +656,8 @@ internal sealed class PetWindow : Window
 
     private object State() => new
     {
-        shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, bubble_scale = settings.BubbleScale, follow_mouse = settings.FollowMouse,
+        shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, bubble_scale = settings.BubbleScale, bubble_seconds = settings.BubbleSeconds,
+        hide_on_fullscreen = settings.HideOnFullscreen, hidden_for_fullscreen = hiddenForFullscreen, follow_mouse = settings.FollowMouse,
         idle_seconds = settings.IdleSeconds, position = new { Left, Top }, saying = speech.IsSaying, reaction = behavior.Showing, trouble,
         clothes = Outfit.Clothes.Select(item => item.Label).ToArray(), accessories = Outfit.Accessories.Select(item => item.Label).ToArray(),
     };

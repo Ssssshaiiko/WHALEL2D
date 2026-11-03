@@ -39,10 +39,12 @@ internal static class Tools
         Tool("dress", "换衣服、戴或摘配饰，会一直保持、下次启动也记得。衣服：" + Labels(Outfit.Clothes) + "；配饰：" + Labels(Outfit.Accessories) +
             "（兔牙张嘴时才看得到）。wear 是要穿戴上的，remove 是要脱掉摘下的。返回现在穿戴着的。",
             """{"wear":{"type":"array","items":{"type":"string"}},"remove":{"type":"array","items":{"type":"string"}}}""", []),
-        Tool("get_state", "读你现在的状态和设置：体型、穿戴、帧率、大小、气泡大小、视线是否跟着鼠标、空闲小动作的间隔、窗口位置、是否正在说话。", "{}"),
+        Tool("get_state", "读你现在的状态和设置：体型、穿戴、帧率、大小、气泡大小和停多久、全屏时藏不藏（现在是不是正藏着）、视线是否跟着鼠标、空闲小动作的间隔、窗口位置、是否正在说话。", "{}"),
         Tool("update_settings", "改设置，只改给了的项，保存下来。shape 体型：small（小只，默认）、chibi（Q 版）、full（全身）；fps 帧率：30、60、90、120；" +
-            "scale 大小 0.5–2；bubble_scale 气泡大小 0.5–2（字和气泡一起缩放，跟 scale 无关）；follow_mouse 视线跟着鼠标；idle_seconds 没人理你时多久做一个小动作（15–600 秒）。",
-            """{"shape":{"type":"string","enum":["small","chibi","full"]},"fps":{"type":"integer","enum":[30,60,90,120]},"scale":{"type":"number","minimum":0.5,"maximum":2},"bubble_scale":{"type":"number","minimum":0.5,"maximum":2},"follow_mouse":{"type":"boolean"},"idle_seconds":{"type":"integer","minimum":15,"maximum":600}}""", []),
+            "scale 大小 0.5–2；bubble_scale 气泡大小 0.5–2（字和气泡一起缩放，跟 scale 无关）；bubble_seconds 说完后气泡停多久：0 按字数自动（5–20 秒，默认），" +
+            "5–180 固定秒数，-1 一直留着到下一句或被点掉；hide_on_fullscreen 别的程序全屏（游戏、视频）时藏起来、不画，默认开；" +
+            "follow_mouse 视线跟着鼠标；idle_seconds 没人理你时多久做一个小动作（15–600 秒）。",
+            """{"shape":{"type":"string","enum":["small","chibi","full"]},"fps":{"type":"integer","enum":[30,60,90,120]},"scale":{"type":"number","minimum":0.5,"maximum":2},"bubble_scale":{"type":"number","minimum":0.5,"maximum":2},"bubble_seconds":{"type":"integer","minimum":-1,"maximum":180},"hide_on_fullscreen":{"type":"boolean"},"follow_mouse":{"type":"boolean"},"idle_seconds":{"type":"integer","minimum":15,"maximum":600}}""", []),
         Tool("recent_events", "用户最近怎么碰了你：点了哪里（zone：head 头、face 脸、hand 手、skirt 裙子、tail 尾巴、body 身上）、你的反应（reaction）、拖动和放下。" +
             "after 可选：只要这个序号之后的。反应身体自己会做，这里只是让你知道，要不要接一句话由你决定。", """{"after":{"type":"integer","minimum":0}}""", []),
         Tool("quit", "鞠躬告别，然后收起你的身体（关掉桌宠）。用户让你收起来时用；收起后只在聊天窗口说话，下次用任何工具时会自动再出来。", "{}"),

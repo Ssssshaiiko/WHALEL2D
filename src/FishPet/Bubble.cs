@@ -116,8 +116,16 @@ internal sealed class Speech
     private Line? line;
     private int shown;
     private DateTime hideAt = DateTime.MaxValue;
-    // How long the bubble stays after the last word: a little longer for more words.
+    // How long the bubble stays after the last word (settings: bubble_seconds): by default a little longer for more
+    // words; -1 keeps it until her next line or a click.
     internal static TimeSpan StaysFor(string words) => TimeSpan.FromSeconds(Math.Clamp(4 + words.Length * .15, 5, 20));
+    internal int Seconds { get; set; }
+    private DateTime Until(string words) => Seconds switch
+    {
+        -1 => DateTime.MaxValue,
+        0 => DateTime.UtcNow + StaysFor(words),
+        var seconds => DateTime.UtcNow.AddSeconds(seconds),
+    };
 
     internal Speech(BubbleWindow bubble)
     {
@@ -151,7 +159,7 @@ internal sealed class Speech
             if (current.Done)
             {
                 timer.Stop();
-                if (current.Plain.Length > 0) { bubble.Say(current.Plain); hideAt = DateTime.UtcNow + StaysFor(current.Plain); }
+                if (current.Plain.Length > 0) { bubble.Say(current.Plain); hideAt = Until(current.Plain); }
             }
         }
         if (!timer.IsEnabled && DateTime.UtcNow >= hideAt) { bubble.Hide(); hideAt = DateTime.MaxValue; }
