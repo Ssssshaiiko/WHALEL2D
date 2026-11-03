@@ -538,7 +538,7 @@ internal sealed class PetWindow : Window
 
     private async Task<object> Run(string name, JsonElement args, CancellationToken token)
     {
-        if (exiting) throw new InvalidOperationException("她正在告别，关掉之后再叫她。");
+        if (exiting) throw new InvalidOperationException("你正在告别，收起之后再叫你出来。");
         if (name is not ("get_state" or "quit" or "recent_events") && trouble != null && player == null) throw new InvalidOperationException(trouble);
         switch (name)
         {
@@ -550,13 +550,13 @@ internal sealed class PetWindow : Window
             case "look_in_mirror":
                 var pose = Tools.OptionalText(args, "try");
                 IReadOnlyList<BitmapSource> shots = pose != null ? await TryInMirror(pose, token) : Snapshot() is { } now ? [now] : [];
-                if (shots.Count == 0) throw new InvalidOperationException("镜子里还什么都看不到，等她出现了再照。");
+                if (shots.Count == 0) throw new InvalidOperationException("镜子里还什么都看不到，等你出现了再照。");
                 return Tools.Image(Picture(shots), new { shots = shots.Count, tried = pose });
             case "look_back":
                 int which = args.TryGetProperty("which", out var value) && value.TryGetInt32(out var number) ? number : 1;
                 if (film != null && !speech.IsSaying && silent == null) FinishFilming();
                 TrimPhotos();
-                if (photos.Count == 0) throw new InvalidOperationException("这半小时里还没有拍下她说话的样子。");
+                if (photos.Count == 0) throw new InvalidOperationException("这半小时里还没有拍下你说话的样子。");
                 if (which < 1 || which > photos.Count) throw new ArgumentException("只留着最近 " + photos.Count + " 句的样子。");
                 var photo = photos[^which];
                 int Ago(DateTime at) => (int)(DateTime.UtcNow - at).TotalSeconds;

@@ -30,7 +30,7 @@
 ## 文件夹里有什么
 
 - `AGENTS.md`：给 Agent 看的：怎么带用户安装、接入，以及平时怎么用。
-- `prompt\身体说明.md`：给角色看的身体说明（填上称呼和名字后放进角色设定）。
+- `prompt\身体说明.md`：给角色看的身体说明（填上称呼和名字后加进角色的人设）。
 - `setup.ps1`：检查、编译、自检。
 - `renderer\`：Live2D 渲染器的源码（C++，要用你自己下载的 Cubism SDK 编译）。
 - `src\FishPet\`：桌宠程序（也带本机网页接口，给用 API 的程序用）；`src\FishPet.Mcp\`：给 Agent 用的 MCP 接口；`src\FishPet.Tests\`：动作逻辑测试。

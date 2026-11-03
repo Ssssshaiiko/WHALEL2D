@@ -146,7 +146,11 @@ public sealed class ControlServer : IDisposable
                 var version = args.TryGetProperty("protocolVersion", out var requested) && requested.GetString() == "2025-03-26" ? "2025-03-26" : "2025-11-25";
                 Result(id, new { protocolVersion = version, capabilities = new { tools = new { listChanged = false }, logging = new { }, resources = new { subscribe = true, listChanged = false } },
                     serverInfo = new { name = "FishPet", version = typeof(ControlServer).Assembly.GetName().Version!.ToString(3) },
-                    instructions = "控制本机桌面上的大肥鱼 Live2D 桌宠。说话用 say（text 里的〔〕是她的神情和动作，规则见插件 prompt/身体说明.md），照镜子用 look_in_mirror，回头看自己说话时的样子用 look_back，换装用 dress，看东西时戴眼镜用 set_activity，读改设置用 get_state / update_settings。用户点她、拖她会被记下来：用 recent_events 读，也会以 notifications/message（logger 为 fishpet.events）推送。点击和拖动的反应桌宠自己会做，你只需要决定要不要接一句话。" });
+                    instructions = "这是你在用户桌面上的身体（大肥鱼 Live2D 形象）。你每次回用户，都用 say 在桌面上把话说出来：一句一个气泡，神情和动作写在〔〕里，" +
+                        "不用等用户提醒，也不是只在用户要你表演时才用；代码、表格、长说明留在聊天窗口，桌面上用一两句口语说要点。〔〕里的词和规矩见 " + Tools.BodyGuide +
+                        "。用户让你 quit 收起身体后，就只在聊天窗口说。照镜子用 look_in_mirror，回头看自己说话时的样子用 look_back，换装用 dress，看东西时戴眼镜用 set_activity，" +
+                        "读改设置用 get_state / update_settings。用户点你、拖你会被记下来：用 recent_events 读，也会以 notifications/message（logger 为 fishpet.events）推送。" +
+                        "点和拖的反应身体自己会做，你只需要决定要不要接一句话。" });
                 return Task.CompletedTask;
             }
             if (method == "ping") { Result(id, new { }); return Task.CompletedTask; }
