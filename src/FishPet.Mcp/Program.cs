@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 
 // The MCP server an agent starts (stdio). It only relays to the pet, which speaks MCP over a pipe of this
@@ -16,7 +17,7 @@ try
     var pipeName = at >= 0 && at + 1 < args.Length ? args[at + 1] : "FishPet." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "|" +
         Path.GetFullPath(AppContext.BaseDirectory).TrimEnd('\\', '/').ToUpperInvariant()))).Substring(0, 20);
-    using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+    using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
     try { await pipe.ConnectAsync(1500); }
     catch (TimeoutException) when (at < 0)
     {
@@ -28,6 +29,7 @@ try
         // The first start compiles her shaders and may take a while.
         await pipe.ConnectAsync(60000);
     }
+    Pipe.EnsureMine(pipe);
     using var cancel = new CancellationTokenSource();
     var input = Console.OpenStandardInput(); var output = Console.OpenStandardOutput();
     var toPet = input.CopyToAsync(pipe, cancel.Token); var toAgent = pipe.CopyToAsync(output, cancel.Token);
@@ -41,3 +43,15 @@ catch (Exception e)
     return 1;
 }
 return 0;
+
+internal static class Pipe
+{
+    // The pet's pipe must be this user's, so no one else's program poses as her. Checked against the user and not,
+    // as PipeOptions.CurrentUserOnly does, against the token's default owner: that is Administrators for some agent
+    // hosts' processes (DeepSeek Harness, 2026-11-03), and the pet, started by Explorer, is not one of them.
+    internal static void EnsureMine(NamedPipeClientStream pipe)
+    {
+        if (pipe.GetAccessControl().GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner || owner != WindowsIdentity.GetCurrent().User)
+            throw new UnauthorizedAccessException("这个桌宠不是当前用户开的。");
+    }
+}

@@ -19,9 +19,10 @@ internal static class Check
         using var pet = Process.Start(new ProcessStartInfo(Path.Combine(bin, "FishPet.exe")) { ArgumentList = { "--test", "--pipe", pipeName, "--settings", settings, "--api", apiFile } })!;
         try
         {
-            using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+            using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             Console.WriteLine("等她出来（第一次要编译着色器，可能要一会儿）……");
             await pipe.ConnectAsync(90000);
+            Pipe.EnsureMine(pipe);
             var reader = new StreamReader(pipe, new UTF8Encoding(false));
             var writer = new StreamWriter(pipe, new UTF8Encoding(false)) { AutoFlush = true };
             int id = 0;

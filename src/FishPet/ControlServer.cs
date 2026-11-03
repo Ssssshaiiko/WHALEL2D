@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
@@ -20,6 +22,17 @@ public sealed class ControlServer : IDisposable
     public int Connections => sessions.Values.Count(s => s.Initialized && !s.Closed);
     public ControlServer(Func<string, JsonElement, CancellationToken, Task<object>> execute, string? pipeName = null)
     { this.execute = execute; pipe = pipeName ?? Tools.PipeName; _ = Task.Run(Accept); }
+    // Only this user may open the pipe, and it is owned by this user. PipeOptions.CurrentUserOnly would make its
+    // owner the token's default owner, which is Administrators for some agent hosts' processes (DeepSeek Harness,
+    // 2026-11-03): FishPet.Mcp checks the owner against the user, so it connects from any of them.
+    private static PipeSecurity UserOnly()
+    {
+        var user = WindowsIdentity.GetCurrent().User!;
+        var security = new PipeSecurity();
+        security.AddAccessRule(new PipeAccessRule(user, PipeAccessRights.FullControl, AccessControlType.Allow));
+        security.SetOwner(user);
+        return security;
+    }
     private async Task Accept()
     {
         while (!lifetime.IsCancellationRequested)
@@ -27,7 +40,7 @@ public sealed class ControlServer : IDisposable
             NamedPipeServerStream? stream = null;
             try
             {
-                stream = new(pipe, PipeDirection.InOut, 16, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                stream = NamedPipeServerStreamAcl.Create(pipe, PipeDirection.InOut, 16, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, UserOnly());
                 await stream.WaitForConnectionAsync(lifetime.Token);
                 var id = Interlocked.Increment(ref nextSession);
                 var session = new Session(this, stream, lifetime.Token); stream = null;
