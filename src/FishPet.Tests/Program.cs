@@ -236,6 +236,9 @@ void VerifyLive2DBehavior()
     Check(spoken.Shown == 2 && !spoken.Done, "with her voice the words spread over the recording and nothing waits");
     spoken.Advance(2.1);
     Check(spoken.Done, "and end with it");
+    // What she says at once is a bubble a line, cues alone on a line going with the words after them.
+    Check(Line.Split("〔看过来〕\n好呀〔点头〕\r\n\n  明天见  \n〔眯眼笑〕").SequenceEqual(["〔看过来〕好呀〔点头〕", "明天见〔眯眼笑〕"]), "several lines are several bubbles");
+    Check(Line.Split("好呀").SequenceEqual(["好呀"]) && Line.Split("〔点头〕").SequenceEqual(["〔点头〕"]), "one line, or cues alone, is one");
 
     var restored = 0;
     var underneath = new Behavior(sent.Add, () => worn, new Random(4)) { HandBusy = () => true, Ended = () => restored++ };

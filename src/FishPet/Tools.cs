@@ -24,9 +24,10 @@ internal static class Tools
 
     // Said to the agent as its own body, not a figure it works: told about "her", agents only moved her when asked to.
     internal static object[] Definitions => [
-        Tool("say", "用你在桌面上的身体说一句话（头上冒气泡）。每次回用户都用它说，不用等用户提醒。text 里用〔〕写神情和动作（词和规则见 " + BodyGuide + "），〔〕不会显示，身体照做；" +
-            "字按说话的节奏一个个出来，碰到〔〕先做动作，动作跟着后面那段话的长短和语气伸缩。audio 可选：这句话的语音（本机 wav 文件的完整路径），" +
-            "会播放一遍，嘴按音量动，〔〕按语音进度做。会等上一句演完再开始；返回时这句已经开始说了。一句一个气泡，几句话就调几次。",
+        Tool("say", "用你在桌面上的身体说话（头上冒气泡）。每次回用户都用它说，不用等用户提醒。要说的几句先想好，写在同一个 text 里一次发出去：一行一个气泡，" +
+            "会一句接一句说完；别说一句、想一会儿、再调一次。text 里用〔〕写神情和动作（词和规则见 " + BodyGuide + "），〔〕不会显示，身体照做；" +
+            "字按说话的节奏一个个出来，碰到〔〕先做动作，动作跟着后面那段话的长短和语气伸缩。audio 可选：这段话的语音（本机 wav 文件的完整路径），" +
+            "会播放一遍，嘴按音量动，〔〕按语音进度做；有语音时整段是一个气泡。会等之前的话演完再开始；返回时第一句已经开始说了。",
             """{"text":{"type":"string","minLength":1,"maxLength":2000},"audio":{"type":"string","maxLength":1000}}""", ["text"]),
         Tool("look_in_mirror", "照镜子，看你现在的样子（白底图，只照头到腰）。try 可选：写上想试的神情和动作（〔〕里那些词，不用写括号），" +
             "会先真的做一遍，从头到做完按先后给六张（三列两行，从左到右、从上到下）。", """{"try":{"type":"string","maxLength":200}}""", []),

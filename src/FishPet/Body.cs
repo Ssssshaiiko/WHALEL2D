@@ -264,6 +264,25 @@ internal sealed class Line
     private int index;
     private double at;
 
+    // What she says in one go, a bubble for each line, said one after the other: she thinks the whole of it through and
+    // says it at once, not a line, a pause to think, then the next (the owner, 2026-11-03). A line of nothing but 〔〕
+    // goes with the words after it (at the end, before it): her body has no bubble of its own.
+    internal static List<string> Split(string text)
+    {
+        var lines = new List<string>();
+        string pending = "";
+        foreach (var raw in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            if (Body.Strip(line).Trim().Length == 0) { pending += line; continue; }
+            lines.Add(pending + line);
+            pending = "";
+        }
+        if (pending.Length > 0) { if (lines.Count > 0) lines[^1] += pending; else lines.Add(pending); }
+        return lines;
+    }
+
     internal Line(string text, Func<string, double, char, double> act, double? voiceSeconds = null)
     {
         this.act = act;

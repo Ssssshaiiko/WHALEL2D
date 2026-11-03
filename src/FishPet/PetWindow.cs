@@ -545,8 +545,13 @@ internal sealed class PetWindow : Window
             case "say":
                 var text = Tools.RequiredText(args, "text");
                 var audio = Tools.OptionalText(args, "audio");
-                await InTurn(() => { SayLine(text, audio != null ? PlayVoice(audio) : null); return Task.CompletedTask; }, token);
-                return Tools.Text(new { started = true, said = Body.Strip(text) });
+                // A line each, in turn; the call returns once the first has begun, the rest wait their turn whoever
+                // asked. A recording is one utterance, so with one it is a single bubble.
+                var bubbles = audio != null ? [text] : Line.Split(text);
+                await InTurn(() => { SayLine(bubbles[0], audio != null ? PlayVoice(audio) : null); return Task.CompletedTask; }, token);
+                foreach (var next in bubbles.Skip(1))
+                    _ = InTurn(() => { if (!exiting) SayLine(next, null); return Task.CompletedTask; }, CancellationToken.None);
+                return Tools.Text(new { started = true, bubbles = bubbles.Count, said = Body.Strip(text) });
             case "look_in_mirror":
                 var pose = Tools.OptionalText(args, "try");
                 IReadOnlyList<BitmapSource> shots = pose != null ? await TryInMirror(pose, token) : Snapshot() is { } now ? [now] : [];

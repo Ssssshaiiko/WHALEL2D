@@ -22,9 +22,15 @@
 
 第 2 到 5 步不管给谁装都一样；第 6、7 步照他的回答，接到对应的 AI 身上、加进对应的人设。给别的 AI 装时，你自己不用接这个插件的 MCP，装好以后也别用这些工具替它说话：说话是那个 AI 的事。
 
-## 第 2 步：看看电脑能不能装
+## 第 2 步：看看放的位置和电脑能不能装
 
-你自己检查，不用问用户：
+**先看插件放的位置**，再查别的。插件要放在普通文件夹里，不能放在 Agent 的沙箱工作区里。有的 Agent 会给自己的工作区打上“低完整性”标签，好让沙箱里的命令能写进去（DeepSeek Harness 就会这样，别的 Agent 这么做也一样）。在这种地方编出来的程序，不管谁启动都以低完整性运行，开不了桌宠，也连不上她。
+
+- 运行 `icacls 插件`，输出里有 `Low Mandatory Level`（或 `S-1-16-4096`）就是放错了地方。把插件文件夹当成工作区打开（比如在 DeepSeek Harness 里直接打开它），也可能被打上这个标签。
+- 放错了，或者是你自己从 GitHub 拉进工作区的：先跟用户说明原因，再在工作区外面重新拉一份，比如 `git clone https://github.com/Ssssshaiiko/WHALEL2D "%USERPROFILE%\大肥鱼插件"`（用户想放别处就听他的），后面的步骤都在新位置做。别把原来的文件夹挪过去，也别用连权限一起复制的工具（比如 `robocopy /COPYALL`），标签会跟着过去。拉好以后再用 `icacls` 看一遍，没有标签才往下做。
+- 你没权限在工作区外面建文件夹、写文件（报拒绝访问，或者你的命令在沙箱里跑）：告诉用户原因，请他把你的权限切到完全访问（DeepSeek Harness 是把权限预设换成 danger-full-access），切完多半要重启你或开个新会话才生效，切好再接着做。之后编译、写配置这些命令都不要放在沙箱里跑。
+
+然后你自己检查电脑，不用问用户：
 
 - 是不是 64 位 Windows 10/11。不是的话告诉用户这个插件装不了。
 - 有没有 Visual Studio 生成工具的 C++ 部分：`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath` 有输出就是有。
@@ -56,7 +62,7 @@
 
 ## 第 5 步：编译，再试一遍
 
-编译前先看插件文件夹有没有低完整性标签：运行 `icacls 插件`，输出里有 `Low Mandatory Level` 的，就是插件在 Agent 的沙箱工作区里（DeepSeek Harness 会给自己的工作区打这个标签，好让沙箱里的命令能写进去）。在这种地方编出来的程序，不管谁启动都以低完整性运行，开不了桌宠，也连不上她。有标签就先跟用户说明，把插件挪到工作区外面（比如 `%USERPROFILE%\大肥鱼插件`，重新拉一份或复制过去都行），再在新位置往下做；编译的命令不要放在沙箱里跑。
+编译前再用 `icacls 插件` 确认一次没有低完整性标签（见第 2 步开头）；编译的命令不要放在沙箱里跑。
 
 告诉用户“接下来我来编译，第一次要几分钟，期间不用他做什么”，然后在 `插件\` 里运行：
 
@@ -108,7 +114,7 @@ MCP 服务是 `插件\bin\FishPet.Mcp.exe`（stdio，没有参数）。它连上
           command: '完整路径\bin\FishPet.Mcp.exe'
           args: []
   ```
-  插件不能放在 DeepSeek Harness 的工作区里（见第 5 步开头）：那里的程序带着低完整性标签，它拉起的这个服务开不了桌宠，也连不上她，表现是工具一直连不上、大约每分钟重连一次。
+  插件不能放在 DeepSeek Harness 的工作区里（见第 2 步开头）：那里的程序带着低完整性标签，它拉起的这个服务开不了桌宠，也连不上她，表现是工具一直连不上、大约每分钟重连一次。
 - Cursor 等其他支持 MCP 的 Agent：在它的 MCP 配置里加同样的一条。
 
 能自己改配置就自己改，改不了就把要加的内容和文件位置告诉用户。多半要重启你自己才会生效：告诉用户怎么重启，并说清楚重启后对你说一句“继续装大肥鱼”，你会接着做第 7 步。重启后他不在插件文件夹里跟你聊的话，这句要带上插件文件夹的完整路径，比如“继续装大肥鱼，插件在 D:\大肥鱼插件”。重启回来后，确认你能看到 say、look_in_mirror 这些工具。
@@ -119,7 +125,7 @@ MCP 服务是 `插件\bin\FishPet.Mcp.exe`（stdio，没有参数）。它连上
 
 1. **先让桌宠开着。** 这种接法没有 MCP 帮着开，运行 `插件\bin\FishPet.exe` 就行（再开一次不会开出两个）。想开机自动出来，就在用户的“启动”文件夹（`shell:startup`）里放一个它的快捷方式，能做就你来做。
 2. **地址和口令**在 `插件\api.json` 里（桌宠第一次开起来后生成），每个请求都要带 `Authorization: Bearer <token>`。这个文件别给别人。
-3. **最简单的接法（不用函数调用）**：模型回复的每一行原样发给 `POST /say`，正文就是这行话（〔〕照样写在里面）；字会出现在气泡里，〔〕变成动作，它会等上一句演完才说下一句。几乎任何聊天程序加一行“回复时顺便发个请求”就能接上。缺点是照镜子、回头看、换装这些用不了。
+3. **最简单的接法（不用函数调用）**：模型的整段回复原样发给 `POST /say`，正文就是回复（〔〕照样写在里面）；一行一个气泡，一句接一句说完，〔〕变成动作，下一次发来的会等这次演完才开始。几乎任何聊天程序加一行“回复时顺便发个请求”就能接上。缺点是照镜子、回头看、换装这些用不了。
 4. **完整接法（用函数调用）**：`GET /tools?format=openai`（或 `format=anthropic`）拿到现成的工具定义，交给模型；模型要用哪个工具，就把参数 JSON 发给 `POST /call/<工具名>`，把返回的 `content`（文字和图片）按你用的 API 的格式回给模型。这样和 MCP 一模一样。
 5. 改好用户的程序（或告诉他改哪里），发一句试试。
 
@@ -131,11 +137,10 @@ import json, pathlib, requests
 api = json.loads(pathlib.Path(r"插件完整路径\api.json").read_text(encoding="utf-8"))
 head = {"Authorization": "Bearer " + api["token"]}
 
-# 最简单：把模型的回复发到桌面上，一行一个气泡
+# 最简单：把模型的整段回复发到桌面上，一行一个气泡
 def to_desktop(reply: str):
-    for line in reply.splitlines():
-        if line.strip():
-            requests.post(api["url"] + "/say", data=line.encode("utf-8"), headers=head, timeout=60)
+    if reply.strip():
+        requests.post(api["url"] + "/say", data=reply.encode("utf-8"), headers=head, timeout=60)
 
 # 完整：工具交给模型；模型要用工具时转给桌宠，结果再回给模型
 tools = requests.get(api["url"] + "/tools?format=openai", headers=head).json()
@@ -143,7 +148,7 @@ def run_tool(name: str, arguments: dict) -> dict:
     return requests.post(f'{api["url"]}/call/{name}', json=arguments, headers=head, timeout=120).json()
 ```
 
-用最简单的接法时，第 7 步的身体说明要改几处：把第一段里“每次回{称呼}，都用 say 把话说出来，一句一个气泡，不用等{称呼}提醒，也不是只有被叫去表演时才用”换成“你回复里的每一行都会出现在桌面上的气泡里，一行一个气泡”；删掉第二段（讲聊天窗口和收起身体的那段）；删掉讲 recent_events、set_activity、照镜子和 look_back、dress 的那几条（这些工具你用不了）。
+用最简单的接法时，第 7 步的身体说明要改几处：把第一段里从“每次回{称呼}”到“中间干等着很奇怪。”这几句换成“你回复里的每一行都会出现在桌面上的气泡里，一行一个气泡。”；删掉第二段（讲聊天窗口和收起身体的那段）；删掉讲 recent_events、set_activity、照镜子和 look_back、dress 的那几条（这些工具你用不了）。
 
 ## 第 7 步：给角色装上身体
 
@@ -206,7 +211,7 @@ def run_tool(name: str, arguments: dict) -> dict:
 
 这些是给住进身体的那个 AI 的。给别的 AI 装的，装完由它照身体说明来，你别再用这些工具替它说话。
 
-- 你每次回用户，都用 `say` 在桌面上说出来，一句一个气泡，几句话就调几次，不用等他提醒，也不是只在他要你表演时才用；它会等上一句演完才开始。聊天窗口里的字不会自己跑到桌面上：代码、表格、长说明留在聊天窗口，桌面上用一两句话说个大概（见身体说明第一段）。
+- 你每次回用户，都用 `say` 在桌面上说出来，不用等他提醒，也不是只在他要你表演时才用。要说的几句先想好，写在同一个 `text` 里一次发出去，一行一个气泡，会一句接一句说完；别说一句、想一会儿、再调一次。它会等之前的话演完才开始。聊天窗口里的字不会自己跑到桌面上：代码、表格、长说明留在聊天窗口，桌面上用一两句话说个大概（见身体说明第一段）。
 - 话里用〔〕写神情和动作，规矩照身体说明来。有自己的语音（wav）就放进 `say` 的 `audio`，嘴会跟着声音动。
 - 看视频、读文章、写东西的时候，用 `set_activity` 开始和结束，她会戴上、摘下眼镜。
 - 想看自己现在什么样、某个表情好不好看：`look_in_mirror`（可以先 try）。说话时的样子会自动拍下来：`look_back`。
@@ -218,7 +223,9 @@ def run_tool(name: str, arguments: dict) -> dict:
 
 - **没出现**：看 `get_state` 里的 `trouble`，或 `插件\errors.log`。多半是 SDK 或模型没放对，或者还没跑过 setup.ps1。
 - **平时说话不动，叫她表演才动**：身体说明没进人设，或者改完人设还没重新读。照第 7 步查。
-- **工具一直连不上，桌宠也没出来**：运行 `icacls 插件\bin\FishPet.Mcp.exe` 看有没有 `Low Mandatory Level`。有，就是插件装在了 Agent 的沙箱工作区里（DeepSeek Harness 会给工作区打这个标签），程序都以低完整性运行，开不了桌宠，也打不开和她说话的管道。把插件挪到工作区外面，用不在沙箱里的命令重新跑 setup.ps1，再把 MCP 配置改到新位置的 `bin\FishPet.Mcp.exe`。
+- **工具一直连不上，桌宠也没出来**：多半是 MCP 服务在受限的权限下运行，开不了桌宠，也打不开和她说话的管道。有两种情况：
+  - 运行 `icacls 插件\bin\FishPet.Mcp.exe`，有 `Low Mandatory Level` 的，是插件装在了 Agent 的沙箱工作区里（DeepSeek Harness 会给工作区打这个标签）。照第 2 步开头在工作区外面重新拉一份，用不在沙箱里的命令重新跑 setup.ps1，再把 MCP 配置改到新位置的 `bin\FishPet.Mcp.exe`。
+  - 没有这个标签，但 Agent 自己用沙箱或受限权限去启动 MCP 服务：要在那个 Agent 的设置里让这个服务不受限地运行，怎么设看它自己的说明。
 - **想换位置**：让用户直接用鼠标拖她，位置会记住。她可以一半沉到任务栏后面，脸会留在外面。
 - **想卸载**：先 `quit`，从接着它的 AI 的 MCP 配置里删掉 dafeiyu，再删掉整个插件文件夹。
 - **用户想把插件分享给别人**：只分享插件本身，`sdk\`、`model\`、`renderer\build\`、`bin\` 都不要带上（`.gitignore` 已经排除了它们）。
