@@ -35,8 +35,20 @@ $line = & $vswhere -products * -latest -property catalog_productLineVersion
 $generator = switch ($line) { '2026' { 'Visual Studio 18 2026' } '2019' { 'Visual Studio 16 2019' } default { 'Visual Studio 17 2022' } }
 Ok ('编译工具：' + $generator)
 
+# 更新时，正在运行的桥接（Agent 开着就一直在）和桌宠占着编好的文件，直接覆盖会失败。Windows 允许给正在用的文件改名：
+# 占着的先挪成 .old，新的照常放进去，旧进程用旧文件跑到结束；上次留下的 .old，这次能删就删。
+function Free($folder) {
+    if (!(Test-Path -LiteralPath $folder)) { return }
+    Get-ChildItem -LiteralPath $folder -Filter '*.old' -File | ForEach-Object { Remove-Item -LiteralPath $_.FullName -ErrorAction SilentlyContinue }
+    foreach ($file in Get-ChildItem -LiteralPath $folder -File | Where-Object { $_.Extension -in '.exe', '.dll' }) {
+        try { [IO.File]::Open($file.FullName, 'Open', 'ReadWrite', 'None').Dispose() }
+        catch { Rename-Item -LiteralPath $file.FullName -NewName ($file.Name + '.' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.old') }
+    }
+}
+
 # 渲染器（链接 Cubism Core，只在你自己电脑上编译，不要把 renderer\build 分享给别人）
 $renderer = Join-Path $root 'renderer'
+Free (Join-Path $renderer 'build\Release')
 & $cmake -S $renderer -B (Join-Path $renderer 'build') -G $generator -A x64 "-DCUBISM_SDK=$($sdk -replace '\\', '/')" | Out-Null
 if ($LASTEXITCODE -ne 0) { Missing '渲染器配置失败，看上面的输出。' }
 & $cmake --build (Join-Path $renderer 'build') --config Release --parallel --target l2d-render | Out-Null
@@ -46,6 +58,7 @@ Ok '渲染器编译好了'
 # .NET 10 SDK
 $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
 if (!$dotnet -or !(& dotnet --list-sdks | Where-Object { $_ -match '^(1[0-9])\.' })) { Missing '没装 .NET 10 SDK。可以运行：winget install Microsoft.DotNet.SDK.10' }
+Free (Join-Path $root 'bin')
 foreach ($project in 'FishPet', 'FishPet.Mcp') {
     & dotnet publish (Join-Path $root "src\$project\$project.csproj") -c Release -o (Join-Path $root 'bin') --nologo -v q | Out-Null
     if ($LASTEXITCODE -ne 0) { Missing "$project 编译失败。再运行一次 dotnet publish src\$project\$project.csproj -c Release -o bin 看输出。" }
