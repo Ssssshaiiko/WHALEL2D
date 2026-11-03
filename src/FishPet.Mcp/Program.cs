@@ -8,7 +8,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 // The MCP server an agent starts (stdio). It relays to the pet, which speaks MCP over a pipe of this user's own; if
-// she is not up yet it starts her first, outside the agent's process tree, so closing the agent does not close her.
+// she is not up yet it starts her first, outside the agent's process tree, so the agent closing does not cut her off
+// mid-word: with no agent left she bows out by herself (PetWindow.GoWithAgent).
 // When she goes (quit, or she fell over) it stays: an agent that restarts a server that ended (DeepSeek Harness does,
 // half a second later) had her straight back three seconds after quit, and one that does not lost her tools. She
 // comes back for the next thing that needs her (the owner, 2026-11-03).

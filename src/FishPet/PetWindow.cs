@@ -113,7 +113,7 @@ internal sealed class PetWindow : Window
         {
             Start();
             server = new ControlServer(Execute, pipe);
-            try { api = HttpApi.Start(Places.ApiFile, test ? 0 : HttpApi.DefaultPort, Execute); }
+            try { api = HttpApi.Start(Places.ApiFile, test ? 0 : HttpApi.DefaultPort, (name, args, token) => { lastHttp = DateTime.UtcNow; return Execute(name, args, token); }); }
             catch (Exception error) { Places.Log("网页接口开不起来：" + error.Message); }
             // A newer plugin on GitHub, looked for now and twice a day; the agent hears of it with its next tool (Execute).
             if (!test) _ = Task.Run(async () =>
@@ -251,6 +251,7 @@ internal sealed class PetWindow : Window
 
     private void Tick()
     {
+        GoWithAgent();
         if (player is not { } current) return;
         if (DateTime.UtcNow >= nextFullscreenLook)
         {
@@ -284,6 +285,25 @@ internal sealed class PetWindow : Window
         if (Math.Abs(x - lookX) + Math.Abs(y - lookY) < .01) return;
         lookX = x; lookY = y;
         current.Send(FormattableString.Invariant($"look {x:0.00} {y:0.00}"));
+    }
+
+    // She comes and goes with the agent (the owner, 2026-11-03: the agent closed, she was still there). Once an agent
+    // has been connected, she bows out after a while with none, long enough for one that reconnects or restarts its
+    // servers. A program on the HTTP interface keeps her while it uses her; started by hand with no agent, she stays.
+    private static readonly TimeSpan AloneFor = TimeSpan.FromSeconds(15), HttpUse = TimeSpan.FromMinutes(10);
+    private bool hadAgent;
+    private DateTime? aloneSince;
+    private DateTime lastHttp = DateTime.MinValue;
+
+    private void GoWithAgent()
+    {
+        if (test || exiting) return;
+        if ((server?.Connections ?? 0) > 0) { hadAgent = true; aloneSince = null; return; }
+        if (!hadAgent || DateTime.UtcNow - lastHttp < HttpUse) { aloneSince = null; return; }
+        aloneSince ??= DateTime.UtcNow;
+        if (DateTime.UtcNow - aloneSince < AloneFor) return;
+        Places.Log("接她的 Agent 都断开了，她先退下");
+        Close();
     }
 
     // While another program fills the screen she is hidden and her renderer draws nothing; her words still play on,
