@@ -66,4 +66,4 @@ Write-Host ('  ' + $mcp)
 Write-Host '  Claude Code： claude mcp add dafeiyu -- "' -NoNewline; Write-Host ($mcp + '"')
 Write-Host '  其他 Agent：在它的 MCP 配置里加 { "command": "' -NoNewline; Write-Host (($mcp -replace '\\', '\\') + '" }')
 Write-Host '用模型 API 自己搭的程序（没有 MCP）：开着 bin\FishPet.exe，按 api.json 里的地址和口令发 HTTP 请求。'
-Write-Host '然后把 prompt\身体说明.md 填好称呼和名字，加进角色的人设里。详见 AGENTS.md 第 6 步。'
+Write-Host '然后把 prompt\身体说明.md 填好称呼和名字，加进角色的人设里。详见 AGENTS.md 第 7 步。'
