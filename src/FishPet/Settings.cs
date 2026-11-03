@@ -19,6 +19,8 @@ internal sealed class Settings
     public int BubbleSeconds { get; set; }
     // Out of the way while something else fills the screen, drawing nothing meanwhile (as the BigBlueFish pet does).
     public bool HideOnFullscreen { get; set; } = true;
+    // Whether she looks on GitHub for a newer plugin when she starts and twice a day (Updates).
+    public bool CheckUpdates { get; set; } = true;
     public bool FollowMouse { get; set; } = true;
     // Seconds between the small things she does by herself when nobody talks to her.
     public int IdleSeconds { get; set; } = 40;

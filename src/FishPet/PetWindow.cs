@@ -32,6 +32,7 @@ internal sealed class PetWindow : Window
     private readonly Speech speech;
     private readonly Behavior behavior;
     private readonly Body body;
+    private readonly Updates updates;
     private readonly DispatcherTimer timer;
     // Out of the way while another program fills the screen (settings: hide_on_fullscreen), looked at twice a second.
     private bool hiddenForFullscreen;
@@ -97,6 +98,7 @@ internal sealed class PetWindow : Window
         bubble.Scale = settings.BubbleScale;
         speech = new Speech(bubble) { Seconds = settings.BubbleSeconds };
         body = new Body(Send);
+        updates = new Updates(Places.Root, Places.Log);
         behavior = new Behavior(Send, () => [.. settings.Outfit, .. body.Overlays], new Random()) { HandBusy = () => body.HandUp, Ended = body.Restore };
         ApplySize();
         Place();
@@ -113,6 +115,15 @@ internal sealed class PetWindow : Window
             server = new ControlServer(Execute, pipe);
             try { api = HttpApi.Start(Places.ApiFile, test ? 0 : HttpApi.DefaultPort, Execute); }
             catch (Exception error) { Places.Log("网页接口开不起来：" + error.Message); }
+            // A newer plugin on GitHub, looked for now and twice a day; the agent hears of it with its next tool (Execute).
+            if (!test) _ = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (settings.CheckUpdates) await updates.Check();
+                    await Task.Delay(TimeSpan.FromHours(12));
+                }
+            });
         };
         PreviewMouseLeftButtonDown += Down;
         PreviewMouseMove += Move;
@@ -557,8 +568,17 @@ internal sealed class PetWindow : Window
 
     // ---- The agent's tools ----
 
-    private Task<object> Execute(string name, JsonElement args, CancellationToken token) =>
-        Dispatcher.InvokeAsync(() => Run(name, args, token)).Task.Unwrap();
+    // A newer plugin found on GitHub rides along with whatever the agent asks next, once, for it to tell the user.
+    private async Task<object> Execute(string name, JsonElement args, CancellationToken token)
+    {
+        var result = await Dispatcher.InvokeAsync(() => Run(name, args, token)).Task.Unwrap();
+        return updates.Unannounced() is { } found ? Tools.WithNotice(result, UpdateNotice(found)) : result;
+    }
+
+    private static string UpdateNotice(Updates.Found found) =>
+        "【插件有新版本】GitHub 上比现在这份多了 " + found.Behind + " 处改动（新的在前）：" + string.Join("；", found.Changes) +
+        "。找个合适的时候，用一两句话告诉用户有更新、大概改了什么，问他要不要更新；他说要，就照插件 AGENTS.md 最后的“更新插件”做。" +
+        "这条提醒只出现这一次，之后 get_state 的 update 里还能看到。";
 
     private async Task<object> Run(string name, JsonElement args, CancellationToken token)
     {
@@ -627,6 +647,7 @@ internal sealed class PetWindow : Window
                 {
                     settings.HideOnFullscreen = hide.GetBoolean(); nextFullscreenLook = default;
                 }
+                if (args.TryGetProperty("check_updates", out var check) && check.ValueKind is JsonValueKind.True or JsonValueKind.False) settings.CheckUpdates = check.GetBoolean();
                 if (args.TryGetProperty("follow_mouse", out var follow) && follow.ValueKind is JsonValueKind.True or JsonValueKind.False) settings.FollowMouse = follow.GetBoolean();
                 if (args.TryGetProperty("idle_seconds", out var idle) && idle.TryGetInt32(out var seconds)) settings.IdleSeconds = Math.Clamp(seconds, 15, 600);
                 settings.Save();
@@ -658,6 +679,8 @@ internal sealed class PetWindow : Window
     {
         shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, bubble_scale = settings.BubbleScale, bubble_seconds = settings.BubbleSeconds,
         hide_on_fullscreen = settings.HideOnFullscreen, hidden_for_fullscreen = hiddenForFullscreen, follow_mouse = settings.FollowMouse,
+        check_updates = settings.CheckUpdates,
+        update = updates.Latest is { } found ? new { current = found.Current, latest = found.Latest, behind = found.Behind, changes = found.Changes } : null,
         idle_seconds = settings.IdleSeconds, position = new { Left, Top }, saying = speech.IsSaying, reaction = behavior.Showing, trouble,
         clothes = Outfit.Clothes.Select(item => item.Label).ToArray(), accessories = Outfit.Accessories.Select(item => item.Label).ToArray(),
     };
