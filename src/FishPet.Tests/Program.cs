@@ -4,6 +4,8 @@ using FishPet;
 int checks = 0;
 void Check(bool condition, string message) { if (!condition) throw new Exception(message); checks++; }
 VerifyLive2DBehavior();
+VerifyWhatHerBodyTellsHer();
+VerifyUpdateReminders();
 Console.WriteLine($"FishPet: {checks} checks passed.");
 
 void VerifyLive2DBehavior()
@@ -261,4 +263,44 @@ void VerifyLive2DBehavior()
     Check(underneath.Showing == "开心" && !Said("motion 默认手切举手"), "a reflex leaves the hand she has up");
     underneath.Tick(start.AddSeconds(3.1), false, 40);
     Check(restored == 1, "and gives her look back when it ends");
+}
+
+// What her body tells her after she speaks, and the guide she learns it from (2026-11-05).
+void VerifyWhatHerBodyTellsHer()
+{
+    var unread = Body.Unread("〔瞒一眼:左 坏笑〕那这把〔微皂眉 摆手〕算你〔大哭 快点头×3 -脸红〕强");
+    Check(unread.SequenceEqual([("瞒一眼:左", "瞟一眼"), ("微皂眉", null), ("摆手", null), ("大哭", null)]), "only the words her body cannot read, each with the one word a character away");
+    Check(Body.Unread("〔歪一下头:右〕好〔恢复〕〔看过来〕").Count == 0, "nothing for words it knows");
+    Check(Body.ActsWithin("〔鼓腮 转头:右〕打错字那叫〔挑一下眉〕活人感") && Body.ActsWithin("好呀〔眯眼笑〕"), "a look after some words moves within");
+    Check(!Body.ActsWithin("〔坏笑〕两天两把轮椅") && !Body.ActsWithin("没写"), "only before the words, or none, does not");
+    bool[] Lines(int within, int before) => [.. Enumerable.Repeat(true, within), .. Enumerable.Repeat(false, before)];
+    Check(Body.NeedsActing(Lines(3, 1)) && Body.NeedsActing(Lines(1, 9)) && !Body.NeedsActing(Lines(2, 8)), "reminded until two of the last ten move within");
+    var folder = new DirectoryInfo(AppContext.BaseDirectory);
+    while (folder != null && !File.Exists(Path.Combine(folder.FullName, "prompt", "身体说明.md"))) folder = folder.Parent;
+    Check(folder != null, "the body guide is found");
+    var guide = File.ReadAllText(Path.Combine(folder!.FullName, "prompt", "身体说明.md"));
+    Check(Body.GuideVersion(guide) == "2026-11-05" && guide.TrimEnd().EndsWith("【你的身体·完】（身体说明 2026-11-05 版）"), "the guide ends with its version");
+    var examples = guide.Split('\n').Select(line => line.TrimEnd('\r')).Where(line => line.StartsWith("- 【") && line.Contains('→')).ToArray();
+    Check(examples.Length == 12, "twelve examples");
+    foreach (var example in examples)
+    {
+        var said = example[(example.IndexOf('→') + 1)..].Split('／');
+        Check(said.Length == 3 && said.Any(Body.ActsWithin), "three lines, a look within the words: " + example[..12]);
+        Check(Body.Unread(string.Join("\n", said)).Count == 0, "every word in it her body can do: " + example[..12]);
+    }
+    Check(!guide.Contains("欢迎回来~") && !guide.Contains("作业写完了吗"), "the old short ones are gone");
+}
+
+// The update notice comes again each day it is not taken, and says when the body guide changed.
+void VerifyUpdateReminders()
+{
+    using var withGuide = System.Text.Json.JsonDocument.Parse("""{"files":[{"filename":"src/FishPet/Body.cs"},{"filename":"prompt/身体说明.md"}]}""");
+    using var without = System.Text.Json.JsonDocument.Parse("""{"files":[{"filename":"README.md"}]}""");
+    Check(Updates.TouchesGuide(withGuide.RootElement) && !Updates.TouchesGuide(without.RootElement), "the body guide among the changes is seen");
+    var updates = new Updates(Path.GetTempPath(), _ => { }) { Latest = new Updates.Found("aaaaaaa", "bbbbbbb", 2, ["新例子"], true) };
+    var start = new DateTime(2026, 11, 5, 4, 0, 0, DateTimeKind.Utc);
+    Check(updates.Unannounced(start) != null && updates.Unannounced(start.AddHours(1)) == null, "told once, not again at once");
+    Check(updates.Unannounced(start.AddHours(25)) != null && updates.Unannounced(start.AddHours(26)) == null, "told again a day later");
+    updates.Latest = updates.Latest! with { Latest = "ccccccc" };
+    Check(updates.Unannounced(start.AddHours(26.5)) != null, "a newer one is told at once");
 }

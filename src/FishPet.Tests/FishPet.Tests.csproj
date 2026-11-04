@@ -9,5 +9,6 @@
   <ItemGroup>
     <Compile Include="../FishPet/Behavior.cs" Link="Behavior.cs" />
     <Compile Include="../FishPet/Body.cs" Link="Body.cs" />
+    <Compile Include="../FishPet/Updates.cs" Link="Updates.cs" />
   </ItemGroup>
 </Project>

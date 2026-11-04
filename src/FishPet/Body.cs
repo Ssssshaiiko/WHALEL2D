@@ -128,6 +128,29 @@ internal sealed partial class Body
     private static partial Regex CuePattern();
     internal static string Strip(string text) => CuePattern().Replace(text, "");
     internal static bool HasCues(string text) => CuePattern().IsMatch(text);
+    // The words in her 〔〕 her body cannot read, each with the one word it is a character away from when there is
+    // just one (瞒一眼 → 瞟一眼): to tell her, never to do in its place, as 大哭 is not 大笑 (2026-11-05).
+    internal static List<(string Word, string? Like)> Unread(string text)
+    {
+        var unread = new List<(string, string?)>();
+        foreach (Match cue in CuePattern().Matches(text))
+            foreach (var token in cue.Value[1..^1].Split([' ', '　', '、', '，', ','], StringSplitOptions.RemoveEmptyEntries))
+            {
+                string name = Regex.Match(token.TrimStart('-', '－'), @"^(.+?)(?:[×xX*](\d))?(?:[:：](.+))?$").Groups[1].Value;
+                while (!Words.ContainsKey(name) && name.Length > 1 && name[0] is '微' or '大' or '快' or '慢') name = name[1..];
+                if (Words.ContainsKey(name)) continue;
+                var near = Words.Keys.Where(word => word.Length == name.Length && word.Zip(name).Count(pair => pair.First != pair.Second) == 1).ToList();
+                unread.Add((token, near.Count == 1 ? near[0] : null));
+            }
+        return unread;
+    }
+    // Whether a line moves her body while it is said, not only before it: a 〔〕 after some of its words.
+    internal static bool ActsWithin(string line) => Regex.IsMatch(Regex.Replace(line, @"^(\s*〔[^〔〕]*〕)+", ""), @"[^〕\s]\s*〔");
+    // Reminded to think of her body as she speaks while fewer than two of her last ten lines moved within, or fewer
+    // than five were said to tell by (replayed on the promotion video, a good performer was reminded 5 times in 53).
+    internal static bool NeedsActing(IReadOnlyCollection<bool> lines) => lines.Count < 5 || lines.Count(within => within) < 2;
+    // The body guide's version, from its end line 【你的身体·完】（身体说明 … 版）, or null.
+    internal static string? GuideVersion(string guide) => Regex.Match(guide, @"【你的身体·完】（身体说明 (\S+) 版）") is { Success: true } found ? found.Groups[1].Value : null;
     // What she says in order, each piece either words or a cue (without its brackets).
     internal static List<(bool Cue, string Text)> Parts(string text)
     {

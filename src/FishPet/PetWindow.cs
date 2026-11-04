@@ -601,10 +601,24 @@ internal sealed class PetWindow : Window
         return updates.Unannounced() is { } found ? Tools.WithNotice(result, UpdateNotice(found)) : result;
     }
 
+    // What her body could not read in what she said, and while her lines move only before their words, a reminder to
+    // think of her body as she speaks (the owner, 2026-11-05). Her last ten lines since she started.
+    private readonly List<bool> acting = [];
+    private string Heard(IReadOnlyList<string> lines)
+    {
+        acting.AddRange(lines.Select(Body.ActsWithin));
+        if (acting.Count > 10) acting.RemoveRange(0, acting.Count - 10);
+        var unread = Body.Unread(string.Join("\n", lines));
+        var missed = unread.Count == 0 ? "" : "身体没跟上：" + string.Join("、", unread.Select(item => "〔" + item.Word + "〕" + (item.Like != null ? "（想写的是〔" + item.Like + "〕？）" : ""))) +
+            "，" + (unread.Count > 1 ? "这几个" : "这个") + "没做出来。";
+        return missed + (Body.NeedsActing(acting) ? "下次说之前，在心里把这几句演一遍：说到哪儿脸和身子怎么变，就在哪儿写〔〕。" : "");
+    }
+
     private static string UpdateNotice(Updates.Found found) =>
         "【插件有新版本】GitHub 上比现在这份多了 " + found.Behind + " 处改动（新的在前）：" + string.Join("；", found.Changes) +
-        "。找个合适的时候，用一两句话告诉用户有更新、大概改了什么，问他要不要更新；他说要，就照插件 AGENTS.md 最后的“更新插件”做。" +
-        "这条提醒只出现这一次，之后 get_state 的 update 里还能看到。";
+        "。" + (found.Guide ? "这次身体说明也改了，更新完要把你人设里【你的身体】到【你的身体·完】那段换成新版（“更新插件”第 6 步）。" : "") +
+        "找个合适的时候，用一两句话告诉用户有更新、大概改了什么，问他要不要更新；他说要，就照插件 AGENTS.md 最后的“更新插件”做。" +
+        "还没更新的话，过一天会再提醒一次；get_state 的 update 里随时能看到。";
 
     private async Task<object> Run(string name, JsonElement args, CancellationToken token)
     {
@@ -621,7 +635,9 @@ internal sealed class PetWindow : Window
                 await InTurn(() => { SayLine(bubbles[0], audio != null ? PlayVoice(audio) : null); return Task.CompletedTask; }, token);
                 foreach (var next in bubbles.Skip(1))
                     _ = InTurn(() => { if (!exiting) SayLine(next, null); return Task.CompletedTask; }, CancellationToken.None);
-                return Tools.Text(new { started = true, bubbles = bubbles.Count, said = Body.Strip(text) });
+                var note = Heard(bubbles);
+                return Tools.Text(note.Length == 0 ? new { started = true, bubbles = bubbles.Count, said = Body.Strip(text) }
+                    : (object)new { started = true, bubbles = bubbles.Count, said = Body.Strip(text), note });
             case "look_in_mirror":
                 var pose = Tools.OptionalText(args, "try");
                 IReadOnlyList<BitmapSource> shots = pose != null ? await TryInMirror(pose, token) : Snapshot() is { } now ? [now] : [];
@@ -706,7 +722,7 @@ internal sealed class PetWindow : Window
         shape = settings.Shape, shapeLabel = Shape.Label, wearing = Wearing(), fps = settings.Fps, scale = settings.Scale, bubble_scale = settings.BubbleScale, bubble_seconds = settings.BubbleSeconds,
         hide_on_fullscreen = settings.HideOnFullscreen, hidden_for_fullscreen = hiddenForFullscreen, follow_mouse = settings.FollowMouse,
         check_updates = settings.CheckUpdates,
-        update = updates.Latest is { } found ? new { current = found.Current, latest = found.Latest, behind = found.Behind, changes = found.Changes } : null,
+        update = updates.Latest is { } found ? new { current = found.Current, latest = found.Latest, behind = found.Behind, changes = found.Changes, guide = found.Guide } : null,
         idle_seconds = settings.IdleSeconds, position = new { Left, Top }, saying = speech.IsSaying, reaction = behavior.Showing, trouble,
         clothes = Outfit.Clothes.Select(item => item.Label).ToArray(), accessories = Outfit.Accessories.Select(item => item.Label).ToArray(),
     };

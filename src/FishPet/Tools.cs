@@ -28,13 +28,17 @@ internal static class Tools
     private static string Labels((string Label, string Expression)[] items) => string.Join("、", items.Select(item => item.Label));
     // Where the agent finds the words for its body: the descriptions name it in full, wherever the plugin was put.
     internal static string BodyGuide => System.IO.Path.Combine(Places.Root, "prompt", "身体说明.md");
+    // The guide's version, so an agent whose persona holds an older copy sees it in the say description (2026-11-05).
+    internal static string? GuideVersion => System.IO.File.Exists(BodyGuide) ? Body.GuideVersion(System.IO.File.ReadAllText(BodyGuide)) : null;
+    private static string GuideNote => GuideVersion is { } version ? "身体说明现在是 " + version + " 版；你人设里【你的身体·完】那行写的版本对不上或者没有，就是旧版：告诉用户，照 " +
+        System.IO.Path.Combine(Places.Root, "AGENTS.md") + " 最后“更新插件”的第 6 步换成新版。" : "";
 
     // Said to the agent as its own body, not a figure it works: told about "her", agents only moved her when asked to.
     internal static object[] Definitions => [
         Tool("say", "用你在桌面上的身体说话（头上冒气泡）。每次回用户都用它说，不用等用户提醒。要说的几句先想好，写在同一个 text 里一次发出去：一行一个气泡，" +
-            "会一句接一句说完；别说一句、想一会儿、再调一次。text 里用〔〕写神情和动作（词和规则见 " + BodyGuide + "），〔〕不会显示，身体照做；" +
+            "会一句接一句说完；别说一句、想一会儿、再调一次。text 里用〔〕写神情和动作（词和规则见 " + BodyGuide + "），〔〕不会显示，身体照做；说之前在心里把这几句演一遍，说到哪儿脸和身子怎么变，就在哪儿写〔〕；只在开头写一个，整句身体就只动那一下。" +
             "字按说话的节奏一个个出来，碰到〔〕先做动作，动作跟着后面那段话的长短和语气伸缩。audio 可选：这段话的语音（本机 wav 文件的完整路径），" +
-            "会播放一遍，嘴按音量动，〔〕按语音进度做；有语音时整段是一个气泡。会等之前的话演完再开始；返回时第一句已经开始说了。",
+            "会播放一遍，嘴按音量动，〔〕按语音进度做；有语音时整段是一个气泡。会等之前的话演完再开始；返回时第一句已经开始说了；返回里有 note 的，是身体想跟你说的话（哪些词没看懂、要不要边说边动）。" + GuideNote,
             """{"text":{"type":"string","minLength":1,"maxLength":2000},"audio":{"type":"string","maxLength":1000}}""", ["text"]),
         Tool("look_in_mirror", "照镜子，看你现在的样子（白底图，只照头到腰）。try 可选：写上想试的神情和动作（〔〕里那些词，不用写括号），" +
             "会先真的做一遍，从头到做完按先后给六张（三列两行，从左到右、从上到下）。", """{"try":{"type":"string","maxLength":200}}""", []),
