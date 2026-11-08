@@ -480,6 +480,8 @@ public:
         auto idle = motions.find("IDLE");
         if (_motionManager->IsFinished()) { if (idle != motions.end()) _motionManager->StartMotionPriority(idle->second, false, 1); }
         else _motionManager->UpdateMotion(_model, dt);
+        // One hand move at a time: a new one would cut short the one before, and a hand being put away stayed out.
+        if (gestures->IsFinished() && !waitingGestures.empty()) { gestures->StartMotionPriority(waitingGestures.front(), false, 3); waitingGestures.pop_front(); }
         gestures->UpdateMotion(_model, dt);
         _model->SaveParameters();
 
@@ -655,7 +657,7 @@ public:
         auto entry = motions.find(name);
         if (entry == motions.end()) return false;
         if (name == "IDLE") _motionManager->StartMotionPriority(entry->second, false, 1);
-        else gestures->StartMotionPriority(entry->second, false, 3);
+        else waitingGestures.push_back(entry->second);
         return true;
     }
 
@@ -742,6 +744,7 @@ public:
 private:
     CubismModelSettingJson* setting = nullptr;
     CubismMotionManager* gestures = nullptr;
+    std::deque<ACubismMotion*> waitingGestures;   // Hand moves after the one playing, in the order they came.
     csmBool blinkBlocked = false;   // IDLE never touches the eyes, so it must not stop blinking.
     std::vector<ComPtr<ID3D11ShaderResourceView>> textures;
 };

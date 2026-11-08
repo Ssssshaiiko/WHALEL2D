@@ -120,6 +120,9 @@ internal sealed partial class Body
     // What she wears this way stays on when one of her reflexes, which also used it, ends.
     internal IReadOnlyCollection<string> Overlays => overlays;
     internal bool HandUp => hand != null;
+    // A hand one of her moods raised (Behavior.GiveUpHand) is hers once she moves a hand herself: put away before
+    // another goes up, or kept if it is the one she wants, never left out with nobody to put it away.
+    internal Func<(string On, string Off)?>? TakeHand { get; set; }
     internal bool Posing => channels.Count > 0 || overlays.Count > 0 || hand != null;
     // Words her body could not do, for telling her so in her own terms.
     internal List<string> Unknown { get; } = [];
@@ -186,7 +189,7 @@ internal sealed partial class Body
                 if (Find(token[1..]) is not { } gone) { Unknown.Add(token); continue; }
                 if (gone.Overlay is { } face && overlays.Remove(face)) send($"exp {face} 0");
                 if (gone.Channel is { } place) channels.Remove(place);
-                if (gone.Hand is { } off && hand == off) PutHandDown();
+                if (gone.Hand is { } off) { TakeOverHand(); if (hand == off) PutHandDown(); }
                 continue;
             }
             var match = Regex.Match(token, @"^(.+?)(?:[×xX*](\d))?(?:[:：](.+))?$");
@@ -220,6 +223,7 @@ internal sealed partial class Body
             foreach (var place in word.Clear ?? []) channels.Remove(place);
             if (word.Channel is { } channel) channels[channel] = word.Hold!;
             if (word.Overlay is { } overlay && overlays.Add(overlay)) send($"exp {overlay} 1");
+            if (word.HandDown || word.Hand != null) TakeOverHand();
             if (word.HandDown) PutHandDown();
             if (word.Hand is { } up && hand != up) { PutHandDown(); hand = up; send($"motion {up.On}"); }
             foreach (var (id, keys) in move ?? []) send($"anim {id} {keys}");
@@ -231,6 +235,11 @@ internal sealed partial class Body
     }
 
     private static Word? Find(string name) => Words.TryGetValue(name, out var make) ? make(null, 1, null) : null;
+
+    private void TakeOverHand()
+    {
+        if (hand == null && TakeHand?.Invoke() is { } held) hand = held;
+    }
 
     private void PutHandDown()
     {

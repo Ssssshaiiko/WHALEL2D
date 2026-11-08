@@ -114,6 +114,14 @@ internal sealed class Behavior
         return FormattableString.Invariant($"{parts[0]}:{0 - double.Parse(parts[1], CultureInfo.InvariantCulture)}");
     }));
 
+    // She moves a hand herself (Body.TakeHand): what this mood raised is hers now to put away or keep.
+    internal (string On, string Off)? GiveUpHand()
+    {
+        var held = moodGesture;
+        moodGesture = null;
+        return held;
+    }
+
     private void EndMood()
     {
         if (mood == null) return;

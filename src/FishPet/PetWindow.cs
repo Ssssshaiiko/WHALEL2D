@@ -100,6 +100,7 @@ internal sealed class PetWindow : Window
         body = new Body(Send);
         updates = new Updates(Places.Root, Places.Log);
         behavior = new Behavior(Send, () => [.. settings.Outfit, .. body.Overlays], new Random()) { HandBusy = () => body.HandUp, Ended = body.Restore };
+        body.TakeHand = behavior.GiveUpHand;
         ApplySize();
         Place();
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(33), DispatcherPriority.Background, (_, _) => Tick(), Dispatcher);

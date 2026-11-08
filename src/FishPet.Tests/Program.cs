@@ -263,6 +263,28 @@ void VerifyLive2DBehavior()
     Check(underneath.Showing == "开心" && !Said("motion 默认手切举手"), "a reflex leaves the hand she has up");
     underneath.Tick(start.AddSeconds(3.1), false, 40);
     Check(restored == 1, "and gives her look back when it ends");
+
+    // A hand a mood of hers raised is hers once she moves a hand herself: put away first, never left out.
+    var hands = new Body(sent.Add);
+    var moods = new Behavior(sent.Add, () => worn, new Random(4)) { HandBusy = () => hands.HandUp };
+    hands.TakeHand = moods.GiveUpHand;
+    moods.Resume(start, 40);
+    moods.Show("玩狗尾草", start);
+    sent.Clear();
+    hands.Apply("竖手指");
+    int putAway = sent.IndexOf("motion 狗尾草切回默认手");
+    Check(putAway >= 0 && sent.IndexOf("motion 竖手指切出来动画") > putAway, "her hand going up puts away the grass a mood of hers holds, first");
+    sent.Clear();
+    moods.Tick(start.AddSeconds(6), false, 40);
+    Check(moods.Showing == null && !sent.Any(command => command.StartsWith("motion ")), "which the mood then leaves alone");
+    hands.Relax();
+    Check(Said("motion 竖手指切回默认"), "and hers goes down when she relaxes");
+    moods.Click("hand", start.AddSeconds(20));
+    sent.Clear();
+    hands.Apply("抚胸");
+    Check(hands.HandUp && !sent.Any(command => command.StartsWith("motion ")), "a hand a reaction raised that she wants too stays up as it is");
+    hands.Apply("放下手");
+    Check(Said("motion 举手切默认手"), "and goes down when she says so");
 }
 
 // What her body tells her after she speaks, and the guide she learns it from (2026-11-05).
